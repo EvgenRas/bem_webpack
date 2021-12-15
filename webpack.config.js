@@ -2,6 +2,9 @@ const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const postcssPresetEnv = require('postcss-preset-env');
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const TerserPlugin = require("terser-webpack-plugin");
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin;
 
 const PATHS = {
   src: path.resolve(__dirname, 'src'),
@@ -19,7 +22,6 @@ module.exports = {
   output: {
     filename: 'js/[name][contenthash].js',
     path: PATHS.dist
-    // assetModuleFilename: 'assets/img/[name][ext]'
     // clean: true
   },
   devServer: {
@@ -46,7 +48,8 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: 'css/[name][contenthash].css',
       chunkFilename: 'color',
-    })
+    }),
+    // new BundleAnalyzerPlugin()
   ],
   resolve: {
     extensions: ['.js', '.json']
@@ -54,7 +57,34 @@ module.exports = {
   optimization: {
     splitChunks: {
       chunks: 'all'
-    }
+    },
+    minimize: true,
+    minimizer: [
+      new CssMinimizerPlugin({
+        parallel: true,
+        minify: [
+          CssMinimizerPlugin.cssnanoMinify,
+          CssMinimizerPlugin.cleanCssMinify
+        ],
+        minimizerOptions: {
+          preset: [
+            "default",
+            {
+              discardComments: { removeAll: true },
+            },
+          ],
+        },
+      }),
+      new TerserPlugin({
+        terserOptions: {
+          compress: true,
+          format: {
+            comments: false,
+          },
+        },
+        extractComments: false,
+      })
+    ],
   },
   module: {
     rules: [
