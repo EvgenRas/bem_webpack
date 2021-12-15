@@ -1,6 +1,7 @@
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const postcssPresetEnv = require('postcss-preset-env');
 
 const PATHS = {
   src: path.resolve(__dirname, 'src'),
@@ -8,14 +9,18 @@ const PATHS = {
 };
 const PAGES = {
   index: path.resolve(PATHS.src, 'pages', 'index'),
+  color: path.resolve(PATHS.src, 'pages', 'color'),
 };
 module.exports = {
-  mode: 'development',
-  entry: path.resolve(PATHS.src, 'pages', 'index.js'),
+  entry: {
+    index: path.resolve(PAGES.index, 'index.js'),
+    color: path.resolve(PAGES.color, 'color.js')
+  },
   output: {
-    filename: '[name][contenthash].js',
-    path: PATHS.dist,
-    clean: true
+    filename: 'js/[name][contenthash].js',
+    path: PATHS.dist
+    // assetModuleFilename: 'assets/img/[name][ext]'
+    // clean: true
   },
   devServer: {
     compress: true,
@@ -25,14 +30,41 @@ module.exports = {
     new HtmlWebpackPlugin({
       template: `${PAGES.index}/index.pug`,
       filename: 'index.html',
+      chunks: ['index'],
+      inject: 'body',
+    }),
+    new HtmlWebpackPlugin({
+      template: `${PAGES.color}/color.pug`,
+      filename: 'color.html',
+      chunks: ['color'],
       inject: 'body',
     }),
     new MiniCssExtractPlugin({
-      filename: '[name].css',
+      filename: 'css/[name][contenthash].css',
+      chunkFilename: 'index',
+    }),
+    new MiniCssExtractPlugin({
+      filename: 'css/[name][contenthash].css',
+      chunkFilename: 'color',
     })
   ],
+  resolve: {
+    extensions: ['.js', '.json']
+  },
+  optimization: {
+    splitChunks: {
+      chunks: 'all'
+    }
+  },
   module: {
     rules: [
+      {
+        test: /\.m?js$/,
+        exclude: /(node_modules)/,
+        use: {
+          loader: 'babel-loader'
+        }
+      },
       {
         test: /\.pug$/,
         use: [
@@ -56,11 +88,41 @@ module.exports = {
       },
       {
         test: /\.scss$/,
-        use: [ MiniCssExtractPlugin.loader, 'css-loader', 'sass-loader' ]
+        use: [
+          MiniCssExtractPlugin.loader,
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [postcssPresetEnv()],
+              },
+            },
+          },
+          'group-css-media-queries-loader',
+          {
+            loader: 'sass-loader'
+          }
+        ]
       },
       {
         test: /\.(png|jpe?g|gif)$/i,
-        type: 'asset/resource'
+        // type: 'asset/resource',
+        // generator: {
+        //   filename: 'img/[hash][ext]',
+        // },
+        loader: 'file-loader',
+        options: {
+          name: '[name].[ext]',
+          outputPath: 'assets/images/'
+        }
+      },
+      {
+        test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
+        type: "asset/resource",
+        generator: {
+          filename: 'fonts/[hash][ext]',
+        },
       }
     ]
   }
