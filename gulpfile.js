@@ -13,11 +13,14 @@ const pug            = require('gulp-pug');
 const del            = require('del');
 const rename         = require("gulp-rename");
 const change         = require("gulp-change");
+const svgmin         = require('gulp-svgmin');
+const cheerio        = require('gulp-cheerio');
+const replace        = require('gulp-replace');
 
 const path = {
   build: {
     fonts: source_folder + "/assets/fonts/",
-    pugPages: project_folder,
+    pugPages: project_folder
   },
   src: {
     fonts: source_folder + "/assets/fonts/*.ttf",
@@ -38,7 +41,6 @@ function replaceImg(content) {
     // The result can be accessed through the `m`-variable.
     m.forEach((match, groupIndex) => {
       content = content.replace(m[0], '"'+m[1]+'"');
-      console.log(content);
     });
   }
   return content;
@@ -137,16 +139,29 @@ gulp.task('otf2ttf', function () {
 })
 
 gulp.task('svgsprite', function () {
-  return gulp.src([source_folder + '/iconsprite/*.svg'])
-    .pipe(svgsprite({
-      mode: {
-        stack: {
-          sprite: "../icons/icons.svg",
-          example: true
+  return gulp.src([source_folder + '/assets/img/iconsprite/*.svg'])
+    .pipe(svgmin({
+        js2svg: {
+          pretty: true
         }
-      }
-    }))
-    .pipe(dest(path.build.img));
+      }))
+      .pipe(cheerio({
+        run: function ($) {
+          $('[fill]').removeAttr('fill');
+          $('[stroke]').removeAttr('stroke');
+          $('[style]').removeAttr('style');
+        },
+        parserOptions: {xmlMode: true}
+      }))
+      .pipe(replace('&gt;', '>'))
+      .pipe(svgsprite({
+        mode: {
+          symbol: {
+            sprite: "../sprite.svg"
+          }
+        }
+      }))
+      .pipe(dest('./src/assets/img/icons/'));
 })
 
 const build = gulp.series(getFonts, fontsStyle);
